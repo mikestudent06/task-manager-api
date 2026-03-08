@@ -54,10 +54,19 @@ export class AuthService {
       },
     });
 
-    // Send OTP email
-    await this.mailService.sendOtpEmail(user.email, otp);
-
-    this.logger.log(`User registered and OTP sent: ${user.email}`);
+    // Send OTP email (optional in dev when no SMTP is configured)
+    try {
+      await this.mailService.sendOtpEmail(user.email, otp);
+      this.logger.log(`User registered and OTP sent: ${user.email}`);
+    } catch (mailError) {
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.warn(
+          `Mail not sent (no SMTP?). In dev, use this OTP for ${user.email}: ${otp}`,
+        );
+      } else {
+        throw mailError;
+      }
+    }
   }
 
   async login(dto: LoginDto): Promise<TokenPair> {
@@ -241,9 +250,18 @@ export class AuthService {
       data: { otp, otpExpires },
     });
 
-    await this.mailService.sendOtpEmail(user.email, otp);
-
-    this.logger.log(`OTP resent successfully: ${user.email}`);
+    try {
+      await this.mailService.sendOtpEmail(user.email, otp);
+      this.logger.log(`OTP resent successfully: ${user.email}`);
+    } catch (mailError) {
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.warn(
+          `Mail not sent (no SMTP?). In dev, use this OTP for ${user.email}: ${otp}`,
+        );
+      } else {
+        throw mailError;
+      }
+    }
   }
 
   async deactivateAccount(userId: string): Promise<void> {
